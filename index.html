@@ -1,27 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexus Workspace</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      /* Custom scrollbar for webkit */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f5f9;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
-    </style>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus Workspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Enable class-based dark mode for Tailwind CDN
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <style>
+    /* ── Smooth transitions (only on bg/border/color, not on transforms or shadows) */
+    body,
+    aside,
+    nav,
+    header,
+    main,
+    section,
+    article,
+    div,
+    button,
+    input,
+    textarea,
+    select,
+    p,
+    h1,
+    h2,
+    h3,
+    span,
+    a,
+    li {
+      transition: background-color 0.25s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════
+         DARK MODE — activated by adding class="dark" to <html>
+         ════════════════════════════════════════════════════════════════════ */
+
+    /* Page body */
+    html.dark body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+    }
+
+    /* ── Backgrounds ─────────────────────────────────────────────────── */
+    html.dark .bg-white {
+      background-color: #1e293b !important;
+    }
+
+    html.dark .bg-slate-50 {
+      background-color: #162032 !important;
+    }
+
+    html.dark .bg-slate-100 {
+      background-color: #1e293b !important;
+    }
+
+    html.dark .bg-slate-200 {
+      background-color: #334155 !important;
+    }
+
+    /* Page-level gradient wrapper — make the whole page dark */
+    html.dark .min-h-screen {
+      background: #0f172a !important;
+    }
+
+    /* ── Text ────────────────────────────────────────────────────────── */
+    html.dark .text-slate-900 {
+      color: #f1f5f9 !important;
+    }
+
+    html.dark .text-slate-800 {
+      color: #e2e8f0 !important;
+    }
+
+    html.dark .text-slate-700 {
+      color: #cbd5e1 !important;
+    }
+
+    html.dark .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+
+    html.dark .text-slate-500 {
+      color: #64748b !important;
+    }
+
+    html.dark .text-slate-400 {
+      color: #475569 !important;
+    }
+
+    /* ── Borders & Dividers ──────────────────────────────────────────── */
+    html.dark .border-slate-200 {
+      border-color: #2d3f55 !important;
+    }
+
+    html.dark .border-slate-100 {
+      border-color: #1e293b !important;
+    }
+
+    html.dark .divide-slate-100>*+* {
+      border-color: #1e293b !important;
+    }
+
+    html.dark .divide-y>*+* {
+      border-color: #2d3f55 !important;
+    }
+
+    /* ── Inputs ──────────────────────────────────────────────────────── */
+    html.dark input:not([type="radio"]):not([type="checkbox"]),
+    html.dark textarea,
+    html.dark select {
+      background-color: #253347 !important;
+      border-color: #334155 !important;
+      color: #f1f5f9 !important;
+    }
+
+    html.dark input::placeholder,
+    html.dark textarea::placeholder {
+      color: #475569 !important;
+    }
+
+    html.dark .profile-input {
+      background-color: #253347 !important;
+      border-color: #334155 !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* ── Cards / Panels ──────────────────────────────────────────────── */
+    html.dark .shadow-sm {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────── */
+    html.dark aside {
+      background-color: #1a2538 !important;
+      border-color: #2d3f55 !important;
+    }
+
+    /* Sidebar logo area */
+    html.dark aside .border-b {
+      border-color: #2d3f55 !important;
+    }
+
+    /* Sidebar section headings */
+    html.dark aside .text-slate-400 {
+      color: #64748b !important;
+    }
+
+    /* Nav item — inactive */
+    html.dark aside button.text-slate-600 {
+      color: #94a3b8 !important;
+    }
+
+    html.dark aside button.hover\:bg-slate-100:hover,
+    html.dark aside button:hover {
+      background-color: #253347 !important;
+      color: #e2e8f0 !important;
+    }
+
+    /* Sidebar BOTTOM profile strip */
+    html.dark aside>div:last-child {
+      background-color: #152030 !important;
+      border-color: #2d3f55 !important;
+    }
+
+    /* "Notifications" button in sidebar footer */
+    html.dark aside>div:last-child button {
+      color: #cbd5e1 !important;
+    }
+
+    html.dark aside>div:last-child button:hover {
+      background-color: #253347 !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Profile name text in sidebar footer */
+    html.dark aside .text-xs.font-semibold {
+      color: #f1f5f9 !important;
+    }
+
+    html.dark aside .text-xs.text-slate-500 {
+      color: #94a3b8 !important;
+    }
+
+    /* ── Hover overrides ─────────────────────────────────────────────── */
+    html.dark .hover\:bg-slate-100:hover {
+      background-color: #253347 !important;
+    }
+
+    html.dark .hover\:bg-slate-50:hover {
+      background-color: #1e293b !important;
+    }
+
+    html.dark .hover\:bg-white:hover {
+      background-color: #253347 !important;
+    }
+
+    html.dark .hover\:text-slate-900:hover {
+      color: #f1f5f9 !important;
+    }
+
+    /* ── Dropdown / popover menus ────────────────────────────────────── */
+    html.dark .shadow-xl.rounded-xl,
+    html.dark .shadow-2xl.rounded-2xl,
+    html.dark .shadow-2xl.rounded-3xl {
+      background-color: #1e293b !important;
+      border-color: #2d3f55 !important;
+    }
+
+    /* ── Tab bar ─────────────────────────────────────────────────────── */
+    html.dark .overflow-x-auto.bg-white {
+      background-color: #1e293b !important;
+    }
+
+    /* ── Scrollbar (dark) ────────────────────────────────────────────── */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    html.dark ::-webkit-scrollbar-track {
+      background: #1a2538;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    html.dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    html.dark ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -34,10 +258,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-slate-50 text-slate-900 font-sans antialiased">
-    <div id="root"></div>
+
+<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

@@ -146,8 +146,50 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [currentEmail, setCurrentEmail] = useState('');
     const [currentRole, setCurrentRole] = useState<string>(UserRole.MEMBER);
 
-    // Step 3: Socials State
-    const [connectedSocials, setConnectedSocials] = useState<string[]>([]);
+    // Step 3: Socials State — persisted in localStorage so popup close doesn't lose state
+    const [connectedSocials, setConnectedSocials] = useState<string[]>(() => {
+        try { return JSON.parse(localStorage.getItem('sk_socials') || '[]'); } catch { return []; }
+    });
+    const [socialData, setSocialData] = useState<Record<string, { page_name: string }>>(() => {
+        try { return JSON.parse(localStorage.getItem('sk_social_data') || '{}'); } catch { return {}; }
+    });
+    const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+
+    // Persist social state to localStorage whenever it changes
+    useEffect(() => { localStorage.setItem('sk_socials', JSON.stringify(connectedSocials)); }, [connectedSocials]);
+    useEffect(() => { localStorage.setItem('sk_social_data', JSON.stringify(socialData)); }, [socialData]);
+
+    // Generate a stable temp workspace ID for this onboarding session
+    const [tempWorkspaceId] = useState(() => {
+        const saved = localStorage.getItem('sk_tmp_ws_id');
+        if (saved) return saved;
+        const id = `tmp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem('sk_tmp_ws_id', id);
+        return id;
+    });
+
+    // Listen for postMessage from OAuth popups
+    useEffect(() => {
+        const handler = (event: MessageEvent) => {
+            if (event.data?.type !== 'social_connect') return;
+            const { success, platform, page_name } = event.data;
+            setConnectingPlatform(null);
+            if (success && platform) {
+                setConnectedSocials(prev => {
+                    const next = prev.includes(platform) ? prev : [...prev, platform];
+                    localStorage.setItem('sk_socials', JSON.stringify(next));
+                    return next;
+                });
+                setSocialData(prev => {
+                    const next = { ...prev, [platform]: { page_name: page_name || platform } };
+                    localStorage.setItem('sk_social_data', JSON.stringify(next));
+                    return next;
+                });
+            }
+        };
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, []);
 
     // Step 4: Features & Pricing State
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
@@ -258,6 +300,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             formData.append('manageClients', String(manageClients));
             formData.append('invites', JSON.stringify(invites));
             formData.append('connectedSocials', JSON.stringify(connectedSocials));
+            formData.append('tempWorkspaceId', tempWorkspaceId); // re-links OAuth data in DB
             formData.append('billingCycle', billingCycle);
             formData.append('selectedModules', JSON.stringify(selectedModules));
             formData.append('counts', JSON.stringify(counts));
@@ -278,6 +321,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 throw new Error(data?.detail || 'Failed to save workspace. Please try again.');
             }
 
+            // Clear onboarding-session localStorage keys
+            localStorage.removeItem('sk_socials');
+            localStorage.removeItem('sk_social_data');
+            localStorage.removeItem('sk_tmp_ws_id');
             setStep('tutorial');
         } catch (err: any) {
             setSubmitError(err.message);
@@ -309,12 +356,26 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         setInvites(newInvites);
     };
 
-    const toggleSocial = (platform: string) => {
-        if (connectedSocials.includes(platform)) {
-            setConnectedSocials(connectedSocials.filter(s => s !== platform));
-        } else {
-            setConnectedSocials([...connectedSocials, platform]);
+    const connectSocial = (platform: string) => {
+        const origin = encodeURIComponent(window.location.origin);
+        const wsId = encodeURIComponent(tempWorkspaceId);
+        const url = `${API_BASE}/auth/social/${platform}/login?workspace_id=${wsId}&origin=${origin}`;
+        const popup = window.open(url, `connect_${platform}`, 'width=580,height=680,scrollbars=yes,resizable=yes');
+        if (popup) {
+            setConnectingPlatform(platform);
+            // Fallback: detect popup closed without postMessage
+            const timer = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(timer);
+                    setConnectingPlatform(null);
+                }
+            }, 600);
         }
+    };
+
+    const disconnectSocial = (platform: string) => {
+        setConnectedSocials(prev => prev.filter(s => s !== platform));
+        setSocialData(prev => { const n = { ...prev }; delete n[platform]; return n; });
     };
 
     const toggleModule = (id: string) => {
@@ -528,34 +589,88 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
                         {/* Step 3: Socials */}
                         {step === 'socials' && (
-                            <div className="space-y-4 max-w-md mx-auto animate-in slide-in-from-right-8 duration-500">
+                            <div className="space-y-4 max-w-md mx-auto">
+                                <p className="text-sm text-slate-500 mb-6">Connect your social media accounts to manage and schedule posts directly from your workspace.</p>
+
                                 {[
-                                    { id: 'facebook', name: 'Facebook Page', color: 'bg-[#1877f2]', text: 'text-white' },
-                                    { id: 'instagram', name: 'Instagram Business', color: 'bg-pink-600', text: 'text-white' },
-                                    { id: 'linkedin', name: 'LinkedIn Company', color: 'bg-[#0077b5]', text: 'text-white' },
-                                    { id: 'twitter', name: 'X (Twitter)', color: 'bg-black', text: 'text-white' },
+                                    { id: 'facebook', name: 'Facebook Page', color: '#1877f2', emoji: '📘', available: true },
+                                    { id: 'instagram', name: 'Instagram Business', color: '#e1306c', emoji: '📸', available: true },
+                                    { id: 'linkedin', name: 'LinkedIn Company Page', color: '#0077b5', emoji: '💼', available: false },
+                                    { id: 'twitter', name: 'X (Twitter)', color: '#14171a', emoji: '🐦', available: false },
                                 ].map((social) => {
                                     const isConnected = connectedSocials.includes(social.id);
+                                    const isConnecting = connectingPlatform === social.id;
+                                    const data = socialData[social.id];
+
                                     return (
-                                        <div key={social.id} className="flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-all group border-slate-200">
+                                        <div
+                                            key={social.id}
+                                            className={`flex items-center justify-between p-4 border-2 rounded-xl transition-all ${isConnected
+                                                ? 'border-green-300 bg-green-50'
+                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                                }`}
+                                        >
+                                            {/* Left: icon + name */}
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${social.color} ${social.text} shadow-sm`}>
-                                                    <Share2 size={20} />
+                                                <div
+                                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg shadow-sm"
+                                                    style={{ backgroundColor: social.color }}
+                                                >
+                                                    {social.emoji}
                                                 </div>
-                                                <span className="font-bold text-slate-800">{social.name}</span>
+                                                <div>
+                                                    <p className="font-bold text-slate-800 text-sm">{social.name}</p>
+                                                    {isConnected && data?.page_name && (
+                                                        <p className="text-xs text-green-700 font-medium mt-0.5">✓ {data.page_name}</p>
+                                                    )}
+                                                    {!social.available && (
+                                                        <p className="text-xs text-slate-400 mt-0.5">Coming soon</p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <button
-                                                onClick={() => toggleSocial(social.id)}
-                                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${isConnected
-                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                                    }`}
-                                            >
-                                                {isConnected ? 'Connected' : 'Connect'}
-                                            </button>
+
+                                            {/* Right: action button */}
+                                            {social.available ? (
+                                                isConnected ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                                            <Check size={11} /> Connected
+                                                        </span>
+                                                        <button
+                                                            onClick={() => disconnectSocial(social.id)}
+                                                            className="text-xs text-slate-400 hover:text-red-500 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                                                        >
+                                                            Disconnect
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => connectSocial(social.id)}
+                                                        disabled={isConnecting}
+                                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                                    >
+                                                        {isConnecting ? (
+                                                            <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" /></svg> Connecting…</>
+                                                        ) : (
+                                                            <><Share2 size={14} /> Connect</>
+                                                        )}
+                                                    </button>
+                                                )
+                                            ) : (
+                                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">
+                                                    Soon
+                                                </span>
+                                            )}
                                         </div>
                                     );
                                 })}
+
+                                {connectedSocials.length > 0 && (
+                                    <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-700 font-medium flex items-center gap-2">
+                                        <Check size={14} className="text-indigo-500" />
+                                        {connectedSocials.length} account{connectedSocials.length > 1 ? 's' : ''} connected — you can connect more later from Settings.
+                                    </div>
+                                )}
                             </div>
                         )}
 

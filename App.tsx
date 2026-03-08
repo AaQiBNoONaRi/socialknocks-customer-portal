@@ -84,6 +84,42 @@ const Router = ({
 
 
 const App: React.FC = () => {
+
+  // ── Social-callback interceptor ──────────────────────────────────────────
+  // When the OAuth popup lands on /social-callback, we're now on localhost:3000
+  // (same origin as the opener), so window.opener is valid and postMessage works.
+  if (window.location.pathname === '/social-callback') {
+    const params = new URLSearchParams(window.location.search);
+    const msg = {
+      type: params.get('type') || 'social_connect',
+      success: params.get('success') === 'true',
+      platform: params.get('platform') || '',
+      page_name: params.get('page_name') || '',
+      username: params.get('username') || '',
+    };
+    try {
+      if (window.opener) {
+        window.opener.postMessage(msg, window.location.origin);
+      }
+    } catch (e) { /* ignore */ }
+    // Show minimal UI then close
+    setTimeout(() => window.close(), 600);
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', fontFamily: 'sans-serif', color: '#64748b'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+            {msg.success ? '✅' : '❌'}
+          </div>
+          <p>{msg.success ? `Connected! Closing…` : `Connection failed. Closing…`}</p>
+        </div>
+      </div>
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Restore session from localStorage on first load
   const existingToken = (() => { try { return localStorage.getItem('sk_agency_token'); } catch { return null; } })();
   // Start with 'loading' when a token exists so we can check onboarding status

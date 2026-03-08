@@ -97,11 +97,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE}/auth/google/login`;
+    const origin = encodeURIComponent(window.location.origin); // http://localhost:3000
+    window.location.href = `${API_BASE}/auth/google/login?origin=${origin}`;
   };
 
   const handleFacebookLogin = () => {
-    window.location.href = `${API_BASE}/auth/facebook/login`;
+    const origin = encodeURIComponent(window.location.origin); // http://localhost:3000
+    window.location.href = `${API_BASE}/auth/facebook/login?origin=${origin}`;
   };
 
   return (
