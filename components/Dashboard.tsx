@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { TrendingUp, Users, Eye, Megaphone, Plus, PenTool, Share2, ArrowUpRight, Activity, PenSquare } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -155,7 +155,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onCompose }) =
                         </div>
                         <div className="flex-1">
                             <p className="text-sm text-slate-800 font-medium">John Doe approved <span className="text-indigo-600">Campaign #{100+i}</span></p>
-                            <p className="text-xs text-slate-400 mt-1">2 hours ago • Marketing Team</p>
+                            <p className="text-xs text-slate-400 mt-1">2 hours ago â€¢ Marketing Team</p>
                         </div>
                         <div className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full">
                             Done

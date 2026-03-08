@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import { UserRole, Workspace } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -25,6 +25,7 @@ import { Login } from './components/Login';
 import { Onboarding } from './components/Onboarding';
 import { ComposeModal } from './components/ComposeModal';
 import { CustomerSupport } from './components/CustomerSupport';
+import { AuthCallback } from './components/AuthCallback';
 import { ProfileSettings } from './components/ProfileSettings';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { Menu, Search, ChevronDown, X, Building2, PenSquare, Check, Plus, FileText, Shield } from 'lucide-react';
@@ -82,50 +83,20 @@ const Router = ({
   }
 };
 
-
 const App: React.FC = () => {
-
-  // ── Social-callback interceptor ──────────────────────────────────────────
-  // When the OAuth popup lands on /social-callback, we're now on localhost:3000
-  // (same origin as the opener), so window.opener is valid and postMessage works.
-  if (window.location.pathname === '/social-callback') {
-    const params = new URLSearchParams(window.location.search);
-    const msg = {
-      type: params.get('type') || 'social_connect',
-      success: params.get('success') === 'true',
-      platform: params.get('platform') || '',
-      page_name: params.get('page_name') || '',
-      username: params.get('username') || '',
-    };
-    try {
-      if (window.opener) {
-        window.opener.postMessage(msg, window.location.origin);
-      }
-    } catch (e) { /* ignore */ }
-    // Show minimal UI then close
-    setTimeout(() => window.close(), 600);
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', fontFamily: 'sans-serif', color: '#64748b'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-            {msg.success ? '✅' : '❌'}
-          </div>
-          <p>{msg.success ? `Connected! Closing…` : `Connection failed. Closing…`}</p>
-        </div>
-      </div>
-    );
-  }
-  // ─────────────────────────────────────────────────────────────────────────
-
   // Restore session from localStorage on first load
-  const existingToken = (() => { try { return localStorage.getItem('sk_agency_token'); } catch { return null; } })();
-  // Start with 'loading' when a token exists so we can check onboarding status
-  const [authState, setAuthState] = useState<'loading' | 'login' | 'onboarding' | 'app'>(
-    existingToken ? 'loading' : 'login'
-  );
+  const existingToken = (() => { try { return localStorage.getItem('sk_agency_token') || localStorage.getItem('socialknoks_token'); } catch { return null; } })();
+
+  const [authState, setAuthState] = useState<'loading' | 'login' | 'onboarding' | 'app'>(() => {
+    if (window.location.pathname === '/auth-callback') return 'loading'; // Will be handled shortly
+    if (!existingToken || existingToken === 'null' || existingToken === 'undefined') {
+      return 'login';
+    }
+    if (localStorage.getItem('socialknoks_onboarding_pending') === 'true') {
+      return 'onboarding';
+    }
+    return 'loading'; // Will verify token
+  });
   const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.OWNER);
   const [currentPath, setCurrentPath] = useState('/');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -142,8 +113,16 @@ const App: React.FC = () => {
 
   // On mount: if token saved, ask backend whether onboarding was completed
   useEffect(() => {
+    if (window.location.pathname === '/auth-callback') {
+      // Handled below
+      return;
+    }
+
+    // Skip loading check if we already decided it's login or onboarding based on local storage
+    if (authState === 'login' || authState === 'onboarding') return;
+
     if (authState !== 'loading') return;
-    const token = localStorage.getItem('sk_agency_token');
+    const token = localStorage.getItem('sk_agency_token') || localStorage.getItem('socialknoks_token');
     if (!token) { setAuthState('login'); return; }
 
     fetch('http://localhost:8000/api/onboarding/status', {
@@ -152,12 +131,12 @@ const App: React.FC = () => {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => setAuthState(data.onboarding_completed ? 'app' : 'onboarding'))
       .catch(() => {
-        // Token invalid or network error — send back to login
+        // Token invalid or network error â€” send back to login
         localStorage.removeItem('sk_agency_token');
+        localStorage.removeItem('socialknoks_token');
         setAuthState('login');
       });
   }, [authState]);
-
   // Close mobile sidebar on route change
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -182,7 +161,6 @@ const App: React.FC = () => {
       }
     }
   }, [authState]);
-
   const handleRoleChange = (newRole: UserRole) => {
     setCurrentRole(newRole);
     setIsRoleOpen(false);
@@ -193,31 +171,40 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = (token: string, isNew: boolean) => {
+  const handleLogin = (token?: string, isNew?: boolean) => {
     if (isNew) {
-      // Brand new registration → always show onboarding
+      // Brand new registration â†’ always show onboarding
       setAuthState('onboarding');
     } else {
-      // Returning login → check if they already completed onboarding
+      // Returning login â†’ check if they already completed onboarding
       setAuthState('loading');
     }
   };
 
   const handleLogout = () => {
-    try { localStorage.removeItem('sk_agency_token'); } catch { }
+    try {
+      localStorage.removeItem('sk_agency_token');
+      localStorage.removeItem('socialknoks_token');
+    } catch { }
     setAuthState('login');
   };
 
   const handleOnboardingComplete = () => {
+    localStorage.removeItem('socialknoks_onboarding_pending');
     setAuthState('app');
     setShowTourOverlay(true);
   };
+
+  // Check for auth callback path first
+  if (window.location.pathname === '/auth-callback') {
+    return <AuthCallback />;
+  }
 
   if (authState === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl animate-pulse">N</div>
+          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl animate-pulse">C</div>
           <p className="text-slate-500 text-sm">Loading your workspace...</p>
         </div>
       </div>
@@ -242,6 +229,8 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-8 max-w-md w-full relative shadow-2xl animate-in fade-in zoom-in duration-300">
             <button
+              aria-label="Close tour"
+              title="Close tour"
               onClick={() => setShowTourOverlay(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
             >
@@ -281,6 +270,8 @@ const App: React.FC = () => {
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
           <div className="flex items-center gap-3 md:gap-4">
             <button
+              aria-label="Open sidebar"
+              title="Open sidebar"
               className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
               onClick={() => setIsSidebarOpen(true)}
             >
@@ -305,12 +296,12 @@ const App: React.FC = () => {
                 </button>
 
                 {/* Dropdown content */}
-                {isWorkspaceOpen && (
+                {isWorkspaceOpen && workspaces && workspaces.length > 0 && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsWorkspaceOpen(false)} />
                     <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                       <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Switch Workspace</div>
-                      {workspaces.map(ws => (
+                      {workspaces.map((ws: Workspace) => (
                         <button
                           key={ws.id}
                           onClick={() => {
@@ -332,6 +323,7 @@ const App: React.FC = () => {
                     </div>
                   </>
                 )}
+
               </div>
             ) : (
               <div className="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-lg">

@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState } from 'react';
 import { Plus, Check, MoreVertical, Users, Settings, Building2, ArrowRight, Share2, ShoppingBag, IdCard, Sparkles, BarChart3, Rocket, PenTool, X, Loader2, DollarSign, AlertCircle } from 'lucide-react';
 import { Workspace } from '../types';

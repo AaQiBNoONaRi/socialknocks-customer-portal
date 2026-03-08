@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     Building2,
     Users,
@@ -120,7 +120,7 @@ type Step = 'workspace' | 'team' | 'socials' | 'features' | 'pricing' | 'tutoria
 const STEP_ORDER: Step[] = ['workspace', 'team', 'socials', 'features', 'pricing', 'tutorial'];
 
 function getStepFromHash(): Step {
-    // Always start fresh — ignore any leftover hash from a previous session
+    // Always start fresh â€” ignore any leftover hash from a previous session
     window.location.hash = '';
     return 'workspace';
 }
@@ -146,7 +146,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [currentEmail, setCurrentEmail] = useState('');
     const [currentRole, setCurrentRole] = useState<string>(UserRole.MEMBER);
 
-    // Step 3: Socials State — persisted in localStorage so popup close doesn't lose state
+    // Step 3: Socials State â€” persisted in localStorage so popup close doesn't lose state
     const [connectedSocials, setConnectedSocials] = useState<string[]>(() => {
         try { return JSON.parse(localStorage.getItem('sk_socials') || '[]'); } catch { return []; }
     });
@@ -242,7 +242,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             .finally(() => setModulesLoading(false));
     }, []);
 
-    // Map icon name strings → Lucide components
+    // Map icon name strings â†’ Lucide components
     const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
         Sparkles, ShoppingBag, IdCard, PenTool, Layout, BarChart3, Rocket, Shield, CreditCard
     };
@@ -593,10 +593,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                 <p className="text-sm text-slate-500 mb-6">Connect your social media accounts to manage and schedule posts directly from your workspace.</p>
 
                                 {[
-                                    { id: 'facebook', name: 'Facebook Page', color: '#1877f2', emoji: '📘', available: true },
-                                    { id: 'instagram', name: 'Instagram Business', color: '#e1306c', emoji: '📸', available: true },
-                                    { id: 'linkedin', name: 'LinkedIn Company Page', color: '#0077b5', emoji: '💼', available: false },
-                                    { id: 'twitter', name: 'X (Twitter)', color: '#14171a', emoji: '🐦', available: false },
+                                    { id: 'facebook', name: 'Facebook Page', color: '#1877f2', emoji: 'ðŸ“˜', available: true },
+                                    { id: 'instagram', name: 'Instagram Business', color: '#e1306c', emoji: 'ðŸ“¸', available: true },
+                                    { id: 'linkedin', name: 'LinkedIn Company Page', color: '#0077b5', emoji: 'ðŸ’¼', available: false },
+                                    { id: 'twitter', name: 'X (Twitter)', color: '#14171a', emoji: 'ðŸ¦', available: false },
                                 ].map((social) => {
                                     const isConnected = connectedSocials.includes(social.id);
                                     const isConnecting = connectingPlatform === social.id;
@@ -621,7 +621,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                                 <div>
                                                     <p className="font-bold text-slate-800 text-sm">{social.name}</p>
                                                     {isConnected && data?.page_name && (
-                                                        <p className="text-xs text-green-700 font-medium mt-0.5">✓ {data.page_name}</p>
+                                                        <p className="text-xs text-green-700 font-medium mt-0.5">âœ“ {data.page_name}</p>
                                                     )}
                                                     {!social.available && (
                                                         <p className="text-xs text-slate-400 mt-0.5">Coming soon</p>
@@ -650,7 +650,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                                     >
                                                         {isConnecting ? (
-                                                            <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" /></svg> Connecting…</>
+                                                            <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" /></svg> Connectingâ€¦</>
                                                         ) : (
                                                             <><Share2 size={14} /> Connect</>
                                                         )}
@@ -668,7 +668,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                 {connectedSocials.length > 0 && (
                                     <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-700 font-medium flex items-center gap-2">
                                         <Check size={14} className="text-indigo-500" />
-                                        {connectedSocials.length} account{connectedSocials.length > 1 ? 's' : ''} connected — you can connect more later from Settings.
+                                        {connectedSocials.length} account{connectedSocials.length > 1 ? 's' : ''} connected â€” you can connect more later from Settings.
                                     </div>
                                 )}
                             </div>
@@ -708,7 +708,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                         </div>
 
                                         <div className="space-y-4">
-                                            {/* Workspaces — locked to 1 */}
+                                            {/* Workspaces â€” locked to 1 */}
                                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                                                 <div>
                                                     <h4 className="font-bold text-slate-700 flex items-center gap-2">
@@ -727,7 +727,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                                 </div>
                                             </div>
 
-                                            {/* Social Profiles — locked to 4 */}
+                                            {/* Social Profiles â€” locked to 4 */}
                                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                                                 <div>
                                                     <h4 className="font-bold text-slate-700 flex items-center gap-2">
@@ -915,7 +915,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                     className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? (
-                                        <><span className="animate-spin">⏳</span> Saving your workspace...</>
+                                        <><span className="animate-spin">â³</span> Saving your workspace...</>
                                     ) : (
                                         <><CreditCard size={20} /> Pay &amp; Launch Workspace</>
                                     )}

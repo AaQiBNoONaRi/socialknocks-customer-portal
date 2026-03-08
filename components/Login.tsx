@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, Facebook, Loader2, User, AlertCircle } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000';
@@ -40,7 +40,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       if (isSignUp) {
-        // ── REGISTER ────────────────────────────────────────────────────────
+        // â”€â”€ REGISTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // 1. Create the user account via the admin create-test-admin endpoint
         //    (re-uses the existing backend route that stores email + password_hash)
         const regRes = await fetch(`${API_BASE}/auth/admin/create-test-admin`, {
@@ -51,7 +51,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         if (!regRes.ok) {
           const data = await regRes.json().catch(() => ({}));
-          // "Admin already exists" is fine — just log them in
+          // "Admin already exists" is fine â€” just log them in
           if (!data?.message?.includes('already exists')) {
             throw new Error(data?.detail || 'Registration failed. Please try again.');
           }
@@ -73,7 +73,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         localStorage.setItem('sk_agency_token', loginData.token);
         onLogin(loginData.token, true);
       } else {
-        // ── LOGIN ────────────────────────────────────────────────────────────
+        // â”€â”€ LOGIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const loginRes = await fetch(`${API_BASE}/auth/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -167,7 +167,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 />
               </div>
             </div>
