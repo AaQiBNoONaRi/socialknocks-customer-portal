@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-    Plus, 
-    MoreHorizontal, 
-    Image as ImageIcon, 
-    Calendar, 
-    CheckCircle, 
-    Clock, 
-    FileText, 
-    Filter, 
+import {
+    Plus,
+    MoreHorizontal,
+    Image as ImageIcon,
+    Calendar,
+    CheckCircle,
+    Clock,
+    FileText,
+    Filter,
     Send,
     Edit2,
     Eye,
@@ -21,7 +21,9 @@ interface Post {
     id: string;
     content: string;
     media?: string;
-    platform: 'Instagram' | 'LinkedIn' | 'Twitter' | 'Facebook';
+    media_url?: string;
+    platform?: string;
+    platforms?: string[];
     status: 'Draft' | 'Pending' | 'Scheduled' | 'Published';
     date: string;
     author: {
@@ -35,68 +37,40 @@ interface Post {
     };
 }
 
-const MOCK_POSTS: Post[] = [
-    { 
-        id: '1', 
-        content: 'Excited to announce our new summer collection! 🌞 #SummerVibes', 
-        media: 'https://picsum.photos/400/300?random=101', 
-        platform: 'Instagram', 
-        status: 'Draft', 
-        date: 'Oct 26, 2024',
-        author: { name: 'Jane Cooper', avatar: 'https://picsum.photos/40?1' }
-    },
-    { 
-        id: '2', 
-        content: 'Check out our latest case study on sustainable packaging.', 
-        platform: 'LinkedIn', 
-        status: 'Pending', 
-        date: 'Oct 27, 2024',
-        author: { name: 'Wade Warren', avatar: 'https://picsum.photos/40?2' }
-    },
-    { 
-        id: '3', 
-        content: 'Flash Sale starts now! 50% off everything.', 
-        media: 'https://picsum.photos/400/300?random=102', 
-        platform: 'Facebook', 
-        status: 'Scheduled', 
-        date: 'Oct 30, 2024 • 10:00 AM',
-        author: { name: 'Esther Howard', avatar: 'https://picsum.photos/40?3' }
-    },
-    { 
-        id: '4', 
-        content: 'Thanks to everyone who joined our webinar yesterday!', 
-        platform: 'Twitter', 
-        status: 'Published', 
-        date: 'Oct 24, 2024 • 2:00 PM',
-        author: { name: 'Jane Cooper', avatar: 'https://picsum.photos/40?1' },
-        stats: { likes: 124, comments: 12, shares: 45 }
-    },
-    { 
-        id: '5', 
-        content: 'Behind the scenes at our HQ. 🎥', 
-        media: 'https://picsum.photos/400/300?random=103', 
-        platform: 'Instagram', 
-        status: 'Published', 
-        date: 'Oct 23, 2024 • 9:00 AM',
-        author: { name: 'Cameron W.', avatar: 'https://picsum.photos/40?4' },
-        stats: { likes: 1205, comments: 89, shares: 12 }
-    },
-    { 
-        id: '6', 
-        content: 'New blog post is live! Link in bio.', 
-        platform: 'Instagram', 
-        status: 'Draft', 
-        date: 'Oct 28, 2024',
-        author: { name: 'Jane Cooper', avatar: 'https://picsum.photos/40?1' }
-    }
-];
+// MOCK_POSTS removed - now fetching from backend
 
 interface PostsProps {
     onCompose: () => void;
+    onEdit: (post: Post) => void;
+    workspaceId: string;
+    refreshKey?: number;
 }
 
-export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
+export const Posts: React.FC<PostsProps> = ({ onCompose, onEdit, workspaceId, refreshKey }) => {
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [platformFilter, setPlatformFilter] = useState<string>('All');
+
+    React.useEffect(() => {
+        if (!workspaceId) return;
+
+        const fetchPosts = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch(`http://localhost:8000/api/posts/${workspaceId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setPosts(data.posts);
+                }
+            } catch (error) {
+                console.error('Failed to fetch posts:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPosts();
+    }, [workspaceId, refreshKey]);
 
     const getPlatformIcon = (platform: string) => {
         // Simple mapping for demo
@@ -120,9 +94,9 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
         { id: 'Published', label: 'Uploaded / Published', icon: CheckCircle, color: 'bg-green-50 text-green-600' },
     ];
 
-    const filteredPosts = platformFilter === 'All' 
-        ? MOCK_POSTS 
-        : MOCK_POSTS.filter(p => p.platform === platformFilter);
+    const filteredPosts = platformFilter === 'All'
+        ? posts
+        : posts.filter(p => p.platform === platformFilter);
 
     return (
         <div className="h-[calc(100vh-120px)] flex flex-col animate-in fade-in duration-500">
@@ -138,7 +112,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <select 
+                        <select
                             className="pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer hover:border-slate-300 transition-colors"
                             value={platformFilter}
                             onChange={(e) => setPlatformFilter(e.target.value)}
@@ -150,7 +124,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                             <option>Facebook</option>
                         </select>
                     </div>
-                    <button 
+                    <button
                         onClick={onCompose}
                         className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:scale-105 active:scale-95"
                     >
@@ -185,8 +159,12 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                                         <div key={post.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group cursor-pointer hover:border-indigo-300">
                                             {/* Post Header */}
                                             <div className="flex justify-between items-start mb-3">
-                                                <div className={`px-2 py-1 rounded text-[10px] font-bold border flex items-center gap-1 ${getPlatformColor(post.platform)}`}>
-                                                    {post.platform}
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(post.platforms || (post.platform ? [post.platform] : [])).map((plat, idx) => plat && (
+                                                        <div key={idx} className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${getPlatformColor(plat)}`}>
+                                                            {plat}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                                 <button className="text-slate-300 hover:text-slate-600">
                                                     <MoreHorizontal size={16} />
@@ -194,10 +172,10 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                                             </div>
 
                                             {/* Media Thumbnail */}
-                                            {post.media && (
+                                            {(post.media || post.media_url) && (
                                                 <div className="mb-3 rounded-lg overflow-hidden border border-slate-100 h-32 relative group-hover:opacity-90 transition-opacity">
-                                                    <img src={post.media} alt="Post media" className="w-full h-full object-cover" />
-                                                    {post.platform === 'Instagram' && (
+                                                    <img src={post.media || post.media_url} alt="Post media" className="w-full h-full object-cover" />
+                                                    {((post.platforms || (post.platform ? [post.platform] : [])).includes('Instagram')) && (
                                                         <div className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded">
                                                             <ImageIcon size={12} />
                                                         </div>
@@ -225,9 +203,15 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                                                     <img src={post.author.avatar} alt={post.author.name} className="w-5 h-5 rounded-full border border-slate-100" />
                                                     <span className="text-xs text-slate-400">{post.date}</span>
                                                 </div>
-                                                
+
                                                 {post.status === 'Draft' && (
-                                                    <button className="p-1.5 rounded-lg bg-slate-50 text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onEdit(post);
+                                                        }}
+                                                        className="p-1.5 rounded-lg bg-slate-50 text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors"
+                                                    >
                                                         <Edit2 size={14} />
                                                     </button>
                                                 )}
@@ -236,7 +220,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                                                         <Clock size={10} /> Queued
                                                     </div>
                                                 )}
-                                                 {post.status === 'Published' && (
+                                                {post.status === 'Published' && (
                                                     <button className="p-1.5 rounded-lg bg-slate-50 text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
                                                         <ExternalLinkIcon size={14} />
                                                     </button>
@@ -244,7 +228,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
                                             </div>
                                         </div>
                                     ))}
-                                    
+
                                     {/* Empty State for Column */}
                                     {colPosts.length === 0 && (
                                         <div className="text-center py-10 px-4 border-2 border-dashed border-slate-200 rounded-xl">
@@ -266,16 +250,16 @@ export const Posts: React.FC<PostsProps> = ({ onCompose }) => {
 
 // Helper icon component since it was missing
 const ExternalLinkIcon = ({ size, className }: { size: number, className?: string }) => (
-    <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        width={size} 
-        height={size} 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         className={className}
     >
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>

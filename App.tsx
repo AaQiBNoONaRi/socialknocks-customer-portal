@@ -27,6 +27,7 @@ import { ComposeModal } from './components/ComposeModal';
 import { CustomerSupport } from './components/CustomerSupport';
 import { AuthCallback } from './components/AuthCallback';
 import { ProfileSettings } from './components/ProfileSettings';
+import { SocialCallback } from './components/SocialCallback';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { Menu, Search, ChevronDown, X, Building2, PenSquare, Check, Plus, FileText, Shield } from 'lucide-react';
 
@@ -36,17 +37,21 @@ const Router = ({
   role,
   onNavigate,
   onCompose,
+  onEdit,
   currentWorkspace,
   onSwitchWorkspace,
-  workspaces
+  workspaces,
+  refreshKey
 }: {
   path: string,
   role: UserRole,
   onNavigate: (path: string) => void,
   onCompose: () => void,
+  onEdit: (post: any) => void,
   currentWorkspace: Workspace,
   onSwitchWorkspace: (ws: Workspace) => void,
-  workspaces: Workspace[]
+  workspaces: Workspace[],
+  refreshKey: number
 }) => {
   // Super Admin Routes
   if (role === UserRole.SUPER_ADMIN) {
@@ -67,7 +72,7 @@ const Router = ({
     case '/store-analytics': return <StoreAnalytics />;
     case '/svc-analytics': return <SVCAnalytics />;
     case '/scheduler': return <Scheduler onCompose={onCompose} />;
-    case '/posts': return <Posts onCompose={onCompose} />;
+    case '/posts': return <Posts onCompose={onCompose} onEdit={onEdit} workspaceId={currentWorkspace.id} refreshKey={refreshKey} />;
     case '/design': return <DesignRequests />;
     case '/team': return <Team />;
     case '/roles': return <RolesPermissions />;
@@ -78,6 +83,7 @@ const Router = ({
     case '/notifications': return <Notifications />;
     case '/support': return <CustomerSupport />;
     case '/profile': return <ProfileSettings />;
+    case '/social-callback': return <SocialCallback />;
     // Fallback for admin user navigating to regular pages
     default: return <Dashboard onNavigate={onNavigate} onCompose={onCompose} />;
   }
@@ -108,8 +114,20 @@ const App: React.FC = () => {
 
   // UI States
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<any>(null);
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isRoleOpen, setIsRoleOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handlePostSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+    setEditingPost(null);
+  };
+
+  const handleEdit = (post: any) => {
+    setEditingPost(post);
+    setIsComposeOpen(true);
+  };
 
   // On mount: if token saved, ask backend whether onboarding was completed
   useEffect(() => {
@@ -200,6 +218,11 @@ const App: React.FC = () => {
     return <AuthCallback />;
   }
 
+  // Check for social callback path
+  if (window.location.pathname === '/social-callback') {
+    return <SocialCallback />;
+  }
+
   if (authState === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -222,7 +245,18 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 relative">
-      <ComposeModal isOpen={isComposeOpen} onClose={() => setIsComposeOpen(false)} />
+      {isComposeOpen && (
+        <ComposeModal
+          isOpen={isComposeOpen}
+          initialPost={editingPost}
+          onClose={() => {
+            setIsComposeOpen(false);
+            setEditingPost(null);
+          }}
+          workspaceId={currentWorkspace.id}
+          onSuccess={handlePostSuccess}
+        />
+      )}
 
       {/* Tour Overlay - Simple highlighting */}
       {showTourOverlay && (
@@ -399,10 +433,15 @@ const App: React.FC = () => {
               path={currentPath}
               role={currentRole}
               onNavigate={setCurrentPath}
-              onCompose={() => setIsComposeOpen(true)}
+              onCompose={() => {
+                setEditingPost(null);
+                setIsComposeOpen(true);
+              }}
+              onEdit={handleEdit}
               currentWorkspace={currentWorkspace}
               onSwitchWorkspace={setCurrentWorkspace}
               workspaces={workspaces}
+              refreshKey={refreshKey}
             />
           </div>
         </main>
