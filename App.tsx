@@ -71,7 +71,7 @@ const Router = ({
     case '/analytics': return <Analytics />;
     case '/store-analytics': return <StoreAnalytics />;
     case '/svc-analytics': return <SVCAnalytics />;
-    case '/scheduler': return <Scheduler onCompose={onCompose} />;
+    case '/scheduler': return <Scheduler onCompose={onCompose} workspaceId={currentWorkspace.id} />;
     case '/posts': return <Posts onCompose={onCompose} onEdit={onEdit} workspaceId={currentWorkspace.id} refreshKey={refreshKey} />;
     case '/design': return <DesignRequests />;
     case '/team': return <Team />;

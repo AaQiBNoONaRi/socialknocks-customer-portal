@@ -140,6 +140,7 @@ export const SocialProfiles: React.FC = () => {
         { id: 'tiktok', label: 'TikTok Account', icon: Video, color: 'text-slate-900 bg-teal-50', active: false },
     ];
 
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500 relative">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -271,8 +272,8 @@ export const SocialProfiles: React.FC = () => {
                                             onClick={() => option.active && handleConnect(option.id)}
                                             disabled={!!isConnecting || !option.active}
                                             className={`w-full flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all relative ${option.active
-                                                    ? 'border-slate-100 hover:border-indigo-400 hover:bg-indigo-50/30'
-                                                    : 'border-slate-50 bg-slate-50/50 cursor-not-allowed grayscale opacity-60'
+                                                ? 'border-slate-100 hover:border-indigo-400 hover:bg-indigo-50/30'
+                                                : 'border-slate-50 bg-slate-50/50 cursor-not-allowed grayscale opacity-60'
                                                 }`}
                                         >
                                             {isConnecting === option.id ? (

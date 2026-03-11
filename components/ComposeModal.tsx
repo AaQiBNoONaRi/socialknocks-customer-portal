@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Image, MapPin, Smile, Calendar, ChevronDown, Loader2, Globe, Sparkles, Video, Layers, UploadCloud, Instagram, Linkedin, Twitter, Facebook, Youtube } from 'lucide-react';
 
 interface ComposeModalProps {
@@ -24,6 +24,9 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, onClose, wor
     const [postType, setPostType] = useState<'post' | 'reel' | 'story'>('post');
     const [showAIOptions, setShowAIOptions] = useState(false);
 
+    // Connected pages state
+    const [connections, setConnections] = useState<{ platform: string; page_name: string; picture?: string }[]>([]);
+
     // New Feature States
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
@@ -35,7 +38,29 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, onClose, wor
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+    // Fetch connected social pages
+    useEffect(() => {
+        if (!workspaceId || !isOpen) return;
+        fetch(`http://localhost:8000/auth/social/connections/${workspaceId}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data?.connections) setConnections(data.connections);
+            })
+            .catch(() => { });
+    }, [workspaceId, isOpen]);
+
     if (!isOpen) return null;
+
+    // Find the connected page for a given platform
+    const getConnectionFor = (platformId: string) =>
+        connections.find(c => c.platform.toLowerCase() === platformId.toLowerCase());
+
+    // Primary profile: use whichever selected platform has a connection, fallback to first selected
+    const primaryConnection = selectedPlatforms
+        .map(p => getConnectionFor(p))
+        .find(Boolean);
+    const profileName = primaryConnection?.page_name || 'No page connected';
+    const profilePicture = primaryConnection?.picture || null;
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -154,8 +179,16 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, onClose, wor
                             <div className="flex justify-between items-center mb-3">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Channels</label>
                                 <div className="flex items-center gap-2">
-                                    <img src="https://picsum.photos/40" alt="Profile" className="w-6 h-6 rounded-full object-cover border border-slate-200" />
-                                    <span className="text-sm font-bold text-slate-700">Nexus Agency</span>
+                                    {profilePicture ? (
+                                        <img src={profilePicture} alt={profileName} className="w-6 h-6 rounded-full object-cover border border-slate-200" />
+                                    ) : (
+                                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-bold">
+                                            {profileName.charAt(0)}
+                                        </div>
+                                    )}
+                                    <span className="text-sm font-bold text-slate-700 max-w-[160px] truncate" title={profileName}>
+                                        {profileName}
+                                    </span>
                                     <ChevronDown size={14} className="text-slate-400" />
                                 </div>
                             </div>
