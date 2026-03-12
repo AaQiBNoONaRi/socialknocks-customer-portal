@@ -1,109 +1,114 @@
-﻿import React, { useState } from 'react';
-import { Mail, Lock, ArrowRight, Facebook, Loader2, User, AlertCircle } from 'lucide-react';
-
-const API_BASE = 'http://localhost:8000';
+import React, { useState } from 'react';
+import { Mail, Lock, ArrowRight, Github, Linkedin, Facebook, Loader2 } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (token: string, isNew: boolean) => void;
+  onLogin: (token?: string, isNew?: boolean) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlError = params.get('error');
-    if (urlError === 'AccountPending') {
-      setError('Your account is pending approval. Please contact support.');
-    } else if (urlError === 'AccountBanned') {
-      setError('Your account has been banned.');
-    } else if (urlError === 'EmailRequired') {
-      setError('Email is required for authentication.');
-    } else if (urlError === 'GoogleNotConfigured') {
-      setError('Google login is not currently configured for this environment.');
-    } else if (urlError === 'FacebookNotConfigured') {
-      setError('Facebook login is not currently configured for this environment.');
-    } else if (urlError) {
-      setError('Authentication failed. Please try again.');
-    }
-  }, []);
+  const API_BASE = 'http://localhost:8000';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setErrorMsg(null);
     setIsLoading(true);
 
-    try {
-      if (isSignUp) {
-        // ──────────────── REGISTER ──────────────────────────────────────────────
-        // 1. Create the user account via the admin create-test-admin endpoint
-        //    (re-uses the existing backend route that stores email + password_hash)
-        const regRes = await fetch(`${API_BASE}/auth/admin/create-test-admin`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name }),
-        });
+    if (email && password) {
+      try {
+        if (isSignUp) {
+          // ──────────────── REGISTER ──────────────────────────────────────────────
+          // 1. Create the user account via the admin create-test-admin endpoint
+          const regRes = await fetch(`${API_BASE}/auth/admin/create-test-admin`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+          });
 
-        if (!regRes.ok) {
-          const data = await regRes.json().catch(() => ({}));
-          // "Admin already exists" is fine â€” just log them in
-          if (!data?.message?.includes('already exists')) {
-            throw new Error(data?.detail || 'Registration failed. Please try again.');
+          if (!regRes.ok) {
+            const data = await regRes.json().catch(() => ({}));
+            // "Admin already exists" is fine — just log them in
+            if (!data?.message?.includes('already exists')) {
+              throw new Error(data?.detail || 'Registration failed. Please try again.');
+            }
+          }
+
+          // 2. Immediately log in after registration
+          const loginRes = await fetch(`${API_BASE}/auth/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (!loginRes.ok) {
+            const data = await loginRes.json().catch(() => ({}));
+            throw new Error(data?.detail || 'Login after registration failed.');
+          }
+
+          const loginData = await loginRes.json();
+          localStorage.setItem('sk_agency_token', loginData.token);
+          localStorage.setItem('socialknoks_token', loginData.token);
+          if (loginData.role) localStorage.setItem('socialknoks_role', loginData.role);
+          onLogin(loginData.token, true);
+
+        } else {
+          // ──────────────── LOGIN ───────────────────────────────────────────────────
+          const loginRes = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (!loginRes.ok) {
+            const data = await loginRes.json().catch(() => ({}));
+            throw new Error(data?.detail || 'Invalid email or password.');
+          }
+
+          const data = await loginRes.json();
+          if (data.token) {
+            localStorage.setItem('sk_agency_token', data.token);
+            localStorage.setItem('socialknoks_token', data.token);
+            if (data.role) localStorage.setItem('socialknoks_role', data.role);
+            onLogin(data.token, false);
+          } else {
+            throw new Error("Missing token from server response.");
           }
         }
-
-        // 2. Immediately log in after registration
-        const loginRes = await fetch(`${API_BASE}/auth/admin/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!loginRes.ok) {
-          const data = await loginRes.json().catch(() => ({}));
-          throw new Error(data?.detail || 'Login after registration failed.');
-        }
-
-        const loginData = await loginRes.json();
-        localStorage.setItem('sk_agency_token', loginData.token);
-        onLogin(loginData.token, true);
-      } else {
-        // ──────────────── LOGIN ───────────────────────────────────────────────────
-        const loginRes = await fetch(`${API_BASE}/auth/admin/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!loginRes.ok) {
-          const data = await loginRes.json().catch(() => ({}));
-          throw new Error(data?.detail || 'Invalid email or password.');
-        }
-
-        const data = await loginRes.json();
-        localStorage.setItem('sk_agency_token', data.token);
-        onLogin(data.token, false);
+      } catch (err: any) {
+        console.error("Login request failed:", err);
+        setErrorMsg(err.message || "Failed to connect to the server.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Is the backend running?');
-    } finally {
+    } else {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleSocialLogin = (provider: string) => {
+    setIsSocialLoading(provider);
     const origin = encodeURIComponent(window.location.origin); // http://localhost:3000
-    window.location.href = `${API_BASE}/auth/google/login?origin=${origin}`;
-  };
-
-  const handleFacebookLogin = () => {
-    const origin = encodeURIComponent(window.location.origin); // http://localhost:3000
-    window.location.href = `${API_BASE}/auth/facebook/login?origin=${origin}`;
+    
+    if (provider === 'google') {
+      window.location.href = `${API_BASE}/auth/google/login?origin=${origin}`;
+    } else if (provider === 'facebook') {
+      window.location.href = `${API_BASE}/auth/facebook/login?origin=${origin}`;
+    } else {
+      // Simulate OAuth delay/process for others (like linkedin)
+      setTimeout(() => {
+        setIsSocialLoading(null);
+        onLogin();
+      }, 800);
+    }
   };
 
   return (
@@ -111,37 +116,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
         <div className="p-8">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">N</div>
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">C</div>
             <h1 className="text-2xl font-bold text-slate-900">{isSignUp ? 'Create an Account' : 'Welcome Back'}</h1>
             <p className="text-slate-500 mt-2">
-              {isSignUp ? 'Start managing your agency workspace today.' : 'Sign in to access your Nexus workspace.'}
+              {isSignUp ? 'Start managing your agency workspace today.' : 'Sign in to access your Codexia workspace.'}
             </p>
           </div>
 
-          {error && (
-            <div className="mb-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    placeholder="Jane Smith"
-                  />
-                </div>
+            {errorMsg && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm text-center">
+                {errorMsg}
               </div>
             )}
-
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
               <div className="relative">
@@ -153,6 +140,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   placeholder="name@company.com"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -168,6 +156,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   placeholder="••••••••"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -175,10 +164,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
-              {isLoading ? 'Please wait...' : isSignUp ? 'Get Started' : 'Sign In'}
+              {isLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <>
+                  {isSignUp ? 'Get Started' : 'Sign In'}
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
           </form>
 
@@ -192,20 +187,27 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-3 gap-3">
               <button
-                onClick={handleGoogleLogin}
-                className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
+                onClick={() => handleSocialLogin('google')}
+                disabled={!!isSocialLoading || isLoading}
+                className="flex items-center justify-center py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
-                <div className="w-5 h-5 font-bold text-slate-600">G</div>
-                Google
+                {isSocialLoading === 'google' ? <Loader2 size={20} className="animate-spin text-slate-600" /> : <div className="w-5 h-5 text-slate-600 font-bold">G</div>}
               </button>
               <button
-                onClick={handleFacebookLogin}
-                className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
+                onClick={() => handleSocialLogin('linkedin')}
+                disabled={!!isSocialLoading || isLoading}
+                className="flex items-center justify-center py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
-                <Facebook size={18} className="text-[#1877f2]" />
-                Facebook
+                {isSocialLoading === 'linkedin' ? <Loader2 size={20} className="animate-spin text-[#0077b5]" /> : <Linkedin size={20} className="text-[#0077b5]" />}
+              </button>
+              <button
+                onClick={() => handleSocialLogin('facebook')}
+                disabled={!!isSocialLoading || isLoading}
+                className="flex items-center justify-center py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                {isSocialLoading === 'facebook' ? <Loader2 size={20} className="animate-spin text-[#1877f2]" /> : <Facebook size={20} className="text-[#1877f2]" />}
               </button>
             </div>
           </div>
@@ -215,8 +217,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <p className="text-sm text-slate-600">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
-              onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
-              className="text-indigo-600 font-medium hover:text-indigo-500"
+              onClick={() => setIsSignUp(!isSignUp)}
+              disabled={isLoading}
+              className="text-indigo-600 font-medium hover:text-indigo-500 disabled:opacity-50"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>

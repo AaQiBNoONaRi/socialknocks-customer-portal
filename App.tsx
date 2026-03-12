@@ -1,5 +1,4 @@
-﻿
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { UserRole, Workspace } from './types';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -41,7 +40,8 @@ const Router = ({
   currentWorkspace,
   onSwitchWorkspace,
   workspaces,
-  refreshKey
+  refreshKey,
+  hasModuleAccess
 }: {
   path: string,
   role: UserRole,
@@ -51,7 +51,8 @@ const Router = ({
   currentWorkspace: Workspace,
   onSwitchWorkspace: (ws: Workspace) => void,
   workspaces: Workspace[],
-  refreshKey: number
+  refreshKey: number,
+  hasModuleAccess: (moduleName: string) => boolean
 }) => {
   // Super Admin Routes
   if (role === UserRole.SUPER_ADMIN) {
@@ -62,24 +63,24 @@ const Router = ({
 
   // Standard User Routes
   switch (path) {
-    case '/': return <Dashboard onNavigate={onNavigate} onCompose={onCompose} />;
+    case '/': return hasModuleAccess('Dashboard') ? <Dashboard onNavigate={onNavigate} onCompose={onCompose} /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
     case '/workspaces': return <Workspaces workspaces={workspaces} currentWorkspaceId={currentWorkspace.id} onSwitchWorkspace={onSwitchWorkspace} onNavigate={onNavigate} />;
-    case '/ai': return <AIAssistant />;
-    case '/store': return <StoreBuilder />;
+    case '/ai': return hasModuleAccess('AI Studio') ? <AIAssistant /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/store': return hasModuleAccess('Store') ? <StoreBuilder /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
     case '/svc': return <SVCBuilder />;
     case '/campaigns': return <Campaigns />;
-    case '/analytics': return <Analytics />;
-    case '/store-analytics': return <StoreAnalytics />;
-    case '/svc-analytics': return <SVCAnalytics />;
-    case '/scheduler': return <Scheduler onCompose={onCompose} workspaceId={currentWorkspace.id} />;
-    case '/posts': return <Posts onCompose={onCompose} onEdit={onEdit} workspaceId={currentWorkspace.id} refreshKey={refreshKey} />;
-    case '/design': return <DesignRequests />;
-    case '/team': return <Team />;
-    case '/roles': return <RolesPermissions />;
+    case '/analytics': return hasModuleAccess('Analytics') ? <Analytics /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/store-analytics': return hasModuleAccess('Analytics') ? <StoreAnalytics /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/svc-analytics': return hasModuleAccess('Analytics') ? <SVCAnalytics /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/scheduler': return hasModuleAccess('Content Lab') ? <Scheduler onCompose={onCompose} workspaceId={currentWorkspace.id} /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/posts': return hasModuleAccess('Content Lab') ? <Posts onCompose={onCompose} onEdit={onEdit} workspaceId={currentWorkspace.id} refreshKey={refreshKey} /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/design': return hasModuleAccess('Content Lab') ? <DesignRequests /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/team': return hasModuleAccess('Settings') ? <Team currentWorkspace={currentWorkspace} /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/roles': return hasModuleAccess('Settings') ? <RolesPermissions currentWorkspace={currentWorkspace} /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
     case '/social-profiles': return <SocialProfiles />;
     case '/clients': return <Clients />;
-    case '/settings': return <Settings currentWorkspace={currentWorkspace} />;
-    case '/billing': return <Billing />;
+    case '/settings': return hasModuleAccess('Settings') ? <Settings currentWorkspace={currentWorkspace} /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
+    case '/billing': return hasModuleAccess('Settings') ? <Billing /> : <div className="p-8 text-center text-slate-500 font-bold">Access Denied</div>;
     case '/notifications': return <Notifications />;
     case '/support': return <CustomerSupport />;
     case '/profile': return <ProfileSettings />;
@@ -103,6 +104,7 @@ const App: React.FC = () => {
     }
     return 'loading'; // Will verify token
   });
+  
   const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.OWNER);
   const [currentPath, setCurrentPath] = useState('/');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -118,6 +120,12 @@ const App: React.FC = () => {
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [rolesConfig, setRolesConfig] = useState<any[]>([]);
+
+  // TODO: Replace with your actual module access logic using rolesConfig
+  const hasModuleAccess = (moduleName: string) => {
+    return true; 
+  };
 
   const handlePostSuccess = () => {
     setRefreshKey(prev => prev + 1);
@@ -149,12 +157,13 @@ const App: React.FC = () => {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => setAuthState(data.onboarding_completed ? 'app' : 'onboarding'))
       .catch(() => {
-        // Token invalid or network error â€” send back to login
+        // Token invalid or network error — send back to login
         localStorage.removeItem('sk_agency_token');
         localStorage.removeItem('socialknoks_token');
         setAuthState('login');
       });
   }, [authState]);
+
   // Close mobile sidebar on route change
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -179,6 +188,7 @@ const App: React.FC = () => {
       }
     }
   }, [authState]);
+
   const handleRoleChange = (newRole: UserRole) => {
     setCurrentRole(newRole);
     setIsRoleOpen(false);
@@ -191,10 +201,10 @@ const App: React.FC = () => {
 
   const handleLogin = (token?: string, isNew?: boolean) => {
     if (isNew) {
-      // Brand new registration â†’ always show onboarding
+      // Brand new registration → always show onboarding
       setAuthState('onboarding');
     } else {
-      // Returning login â†’ check if they already completed onboarding
+      // Returning login → check if they already completed onboarding
       setAuthState('loading');
     }
   };
@@ -237,7 +247,6 @@ const App: React.FC = () => {
   if (authState === 'login') {
     return <Login onLogin={handleLogin} />;
   }
-
 
   if (authState === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -296,7 +305,7 @@ const App: React.FC = () => {
 
       {/* Sidebar - Mobile Responsive */}
       <div className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-200 ease-in-out`}>
-        <Sidebar currentRole={currentRole} currentPath={currentPath} onNavigate={setCurrentPath} onLogout={handleLogout} />
+        <Sidebar currentRole={currentRole} currentPath={currentPath} onNavigate={setCurrentPath} onLogout={handleLogout} hasModuleAccess={hasModuleAccess} />
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -404,21 +413,23 @@ const App: React.FC = () => {
                 <ChevronDown size={14} className="text-slate-400 hidden md:block" />
               </button>
 
-              {isRoleOpen && (
+              {ifRoleOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsRoleOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50">
                     <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Switch Role (Demo)</div>
-                    {Object.values(UserRole).map((role) => (
-                      <button
-                        key={role}
-                        onClick={() => handleRoleChange(role)}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center justify-between ${currentRole === role ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}
-                      >
-                        {role}
-                        {currentRole === role && <Check size={14} />}
-                      </button>
-                    ))}
+                    {Object.values(UserRole)
+                      .filter(role => role !== UserRole.SUPER_ADMIN && role !== UserRole.OWNER)
+                      .map((role) => (
+                        <button
+                          key={role}
+                          onClick={() => handleRoleChange(role)}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center justify-between ${currentRole === role ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}
+                        >
+                          {role}
+                          {currentRole === role && <Check size={14} />}
+                        </button>
+                      ))}
                   </div>
                 </>
               )}
@@ -442,6 +453,7 @@ const App: React.FC = () => {
               onSwitchWorkspace={setCurrentWorkspace}
               workspaces={workspaces}
               refreshKey={refreshKey}
+              hasModuleAccess={hasModuleAccess}
             />
           </div>
         </main>
