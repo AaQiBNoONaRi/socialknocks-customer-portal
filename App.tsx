@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect } from 'react';
 import { UserRole, Workspace } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -73,7 +73,17 @@ const Router = ({
     case '/svc-analytics': return <SVCAnalytics />;
     case '/scheduler': return <Scheduler onCompose={onCompose} workspaceId={currentWorkspace.id} />;
     case '/posts': return <Posts onCompose={onCompose} onEdit={onEdit} workspaceId={currentWorkspace.id} refreshKey={refreshKey} />;
-    case '/design': return <DesignRequests />;
+    case '/design': 
+      if (role === UserRole.SUPER_ADMIN || role === UserRole.OWNER || role === UserRole.DESIGNER) {
+        return <DesignRequests workspaceId={currentWorkspace.id} />;
+      }
+      return (
+        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+          <Shield size={48} className="text-slate-300 mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h2>
+          <p className="text-slate-500 max-w-md">Only Workspace Owners and Designers can access the Design Requests portal.</p>
+        </div>
+      );
     case '/team': return <Team />;
     case '/roles': return <RolesPermissions />;
     case '/social-profiles': return <SocialProfiles />;
@@ -172,13 +182,49 @@ const App: React.FC = () => {
           .then(data => {
             if (data.workspaces && data.workspaces.length > 0) {
               setWorkspaces(data.workspaces);
-              setCurrentWorkspace(data.workspaces[0]);
+              
+              // Helper to safely map backend string roles to frontend enums
+              const mapRole = (roleStr?: string): UserRole => {
+                if (!roleStr) return UserRole.OWNER;
+                const normalized = roleStr.toLowerCase();
+                if (normalized === 'admin') return UserRole.ADMIN;
+                if (normalized === 'designer') return UserRole.DESIGNER;
+                if (normalized === 'member') return UserRole.MEMBER;
+                if (normalized === 'client') return UserRole.CLIENT;
+                if (normalized === 'guest') return UserRole.GUEST;
+                return UserRole.OWNER;
+              };
+
+              const firstWs = data.workspaces[0];
+              setCurrentWorkspace(firstWs);
+              
+              // Try not to overwrite SUPER_ADMIN if they're logged in as that globally
+              if (currentRole !== UserRole.SUPER_ADMIN) {
+                 setCurrentRole(mapRole(firstWs.my_role));
+              }
             }
           })
           .catch(err => console.error("Failed to fetch workspaces:", err));
       }
     }
   }, [authState]);
+
+  // Update role dynamically when switching workspaces
+  useEffect(() => {
+    if (currentWorkspace && currentWorkspace.my_role && currentRole !== UserRole.SUPER_ADMIN) {
+       const mapRole = (roleStr: string): UserRole => {
+          const normalized = roleStr.toLowerCase();
+          if (normalized === 'admin') return UserRole.ADMIN;
+          if (normalized === 'designer') return UserRole.DESIGNER;
+          if (normalized === 'member') return UserRole.MEMBER;
+          if (normalized === 'client') return UserRole.CLIENT;
+          if (normalized === 'guest') return UserRole.GUEST;
+          return UserRole.OWNER;
+       };
+       setCurrentRole(mapRole(currentWorkspace.my_role as string));
+    }
+  }, [currentWorkspace]);
+
   const handleRoleChange = (newRole: UserRole) => {
     setCurrentRole(newRole);
     setIsRoleOpen(false);

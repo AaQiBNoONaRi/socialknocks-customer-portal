@@ -23,6 +23,7 @@ export interface Workspace {
   plan: string;
   initials: string;
   color: string;
+  my_role?: UserRole | string;
 }
 
 export interface NavGroup {

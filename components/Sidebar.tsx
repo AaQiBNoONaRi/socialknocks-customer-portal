@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState } from 'react';
 import {
   LayoutDashboard,
@@ -58,7 +58,7 @@ const USER_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Planner', icon: Calendar, path: '/scheduler', allowedRoles: [UserRole.OWNER, UserRole.ADMIN, UserRole.MEMBER] },
       { label: 'Posts', icon: FileText, path: '/posts', allowedRoles: [UserRole.OWNER, UserRole.ADMIN, UserRole.MEMBER, UserRole.DESIGNER] },
-      { label: 'Design Requests', icon: PenTool, path: '/design', allowedRoles: [UserRole.OWNER, UserRole.ADMIN, UserRole.MEMBER, UserRole.DESIGNER, UserRole.CLIENT] },
+      { label: 'Design Requests', icon: PenTool, path: '/design', allowedRoles: [UserRole.OWNER, UserRole.DESIGNER] },
     ]
   },
   {

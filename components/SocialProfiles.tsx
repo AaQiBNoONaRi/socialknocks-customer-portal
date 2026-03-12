@@ -98,7 +98,11 @@ export const SocialProfiles: React.FC = () => {
 
         const origin = encodeURIComponent(window.location.origin);
         const wsId = encodeURIComponent(workspaceId || '');
-        const url = `${API_BASE}/auth/social/${platform}/login?workspace_id=${wsId}&origin=${origin}`;
+
+        // Instagram uses the direct Instagram Login API (instagram.com/oauth)
+        // Facebook uses the Facebook OAuth flow
+        const loginRoute = platform === 'instagram' ? 'instagram/direct-login' : `${platform}/login`;
+        const url = `${API_BASE}/auth/social/${loginRoute}?workspace_id=${wsId}&origin=${origin}`;
 
         const popup = window.open(url, `connect_${platform}`, 'width=580,height=680,scrollbars=yes,resizable=yes');
         if (popup) {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     Building2,
     Users,
@@ -359,7 +359,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const connectSocial = (platform: string) => {
         const origin = encodeURIComponent(window.location.origin);
         const wsId = encodeURIComponent(tempWorkspaceId);
-        const url = `${API_BASE}/auth/social/${platform}/login?workspace_id=${wsId}&origin=${origin}`;
+        // Instagram uses the direct Instagram Login API (instagram.com/oauth)
+        const loginRoute = platform === 'instagram' ? 'instagram/direct-login' : `${platform}/login`;
+        const url = `${API_BASE}/auth/social/${loginRoute}?workspace_id=${wsId}&origin=${origin}`;
         const popup = window.open(url, `connect_${platform}`, 'width=580,height=680,scrollbars=yes,resizable=yes');
         if (popup) {
             setConnectingPlatform(platform);

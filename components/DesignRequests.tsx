@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Clock, FileText, X, Folder, Image, Layout, Grid, ChevronRight, ChevronLeft, Mic, StopCircle, UploadCloud, Link, Palette, Calendar, Check, Play, Users } from 'lucide-react';
 import { DesignRequest } from '../types';
 
-const MOCK_REQUESTS: DesignRequest[] = [
-    { id: '1', title: 'Instagram Story Templates', type: 'Social', status: 'In Progress', priority: 'High', date: '2024-10-20', assignedTo: 'Jane Cooper' },
-    { id: '2', title: 'Website Hero Banner', type: 'Web', status: 'Pending', priority: 'Medium', date: '2024-10-21' },
-    { id: '3', title: 'Fall Campaign Logo', type: 'Graphic', status: 'Review', priority: 'High', date: '2024-10-18', assignedTo: 'Esther Howard' },
-];
-
 const PLATFORMS_LIST = ['Instagram', 'Facebook', 'Twitter', 'LinkedIn', 'TikTok', 'YouTube'];
 const DESIGN_TYPES = ['Promotion', 'Announcement', 'Engagement', 'Sales'];
+
+// predefined templates
+const TEMPLATES = [
+    { id: 't1', title: 'Modern Sale Banner', type: 'Sales', platforms: ['Instagram', 'Facebook'], colors: { primary: '#4f46e5', secondary: '#1e293b', accent: '#f8fafc' }, description: 'A sleek, modern sale banner template focusing on bold typography and high contrast for max conversions.' },
+    { id: 't2', title: 'Product Showcase Reel', type: 'Promotion', platforms: ['Instagram', 'TikTok'], colors: { primary: '#ec4899', secondary: '#000000', accent: '#ffffff' }, description: 'Fast-paced video reel format designed to highlight 3-5 product features quickly.' },
+    { id: 't3', title: 'Minimalist Quote Post', type: 'Engagement', platforms: ['Twitter', 'LinkedIn', 'Instagram'], colors: { primary: '#f1f5f9', secondary: '#334155', accent: '#0f172a' }, description: 'Clean, typography-focused layout for sharing industry quotes or customer testimonials.' },
+    { id: 't4', title: 'Black Friday Campaign Set', type: 'Sales', platforms: ['Instagram', 'Facebook', 'Twitter'], colors: { primary: '#000000', secondary: '#ef4444', accent: '#ffffff' }, description: 'Complete set of urgent, high-impact designs for Black Friday or flash sales.' },
+    { id: 't5', title: 'Company Announcement', type: 'Announcement', platforms: ['LinkedIn', 'Twitter'], colors: { primary: '#0284c7', secondary: '#f8fafc', accent: '#0ea5e9' }, description: 'Professional, trustworthy design for sharing company news, milestones, or press releases.' },
+    { id: 't6', title: 'Event Invitation Series', type: 'Promotion', platforms: ['Instagram', 'Facebook', 'LinkedIn'], colors: { primary: '#8b5cf6', secondary: '#1e1b4b', accent: '#ddd6fe' }, description: 'Multi-post series including Save the Date, Speaker Reveals, and Last Chance reminders.' },
+    { id: 't7', title: 'Educational Carousel', type: 'Engagement', platforms: ['Instagram', 'LinkedIn'], colors: { primary: '#10b981', secondary: '#064e3b', accent: '#d1fae5' }, description: '5-slide educational carousel designed to boost saves and shares.' },
+    { id: 't8', title: 'Holiday Greeting Bundle', type: 'Engagement', platforms: ['Instagram', 'Facebook', 'LinkedIn'], colors: { primary: '#b91c1c', secondary: '#14532d', accent: '#fef3c7' }, description: 'Warm, festive templates for sharing holiday cheer with your audience and clients.' },
+];
 
 const TEAM_MEMBERS = [
     { id: '1', name: 'Jane Cooper' },
@@ -18,15 +24,45 @@ const TEAM_MEMBERS = [
     { id: '4', name: 'Cameron Williamson' },
 ];
 
-export const DesignRequests: React.FC = () => {
+interface DesignRequestsProps {
+    workspaceId: string;
+}
+
+export const DesignRequests: React.FC<DesignRequestsProps> = ({ workspaceId }) => {
     const [activeTab, setActiveTab] = useState<'requests' | 'templates'>('requests');
     const [isCreating, setIsCreating] = useState(false);
-    const [requests, setRequests] = useState<DesignRequest[]>(MOCK_REQUESTS);
+    const [requests, setRequests] = useState<DesignRequest[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!workspaceId) return;
+        const fetchRequests = async () => {
+            setIsLoading(true);
+             try {
+                 const token = localStorage.getItem('sk_agency_token') || localStorage.getItem('socialknoks_token');
+                 const response = await fetch(`http://localhost:8000/api/design-requests/${workspaceId}`, {
+                      headers: { Authorization: `Bearer ${token}` }
+                 });
+                 if (response.ok) {
+                     const data = await response.json();
+                     setRequests(data.requests);
+                 }
+             } catch (error) {
+                 console.error("Failed to fetch design requests", error);
+             } finally {
+                 setIsLoading(false);
+             }
+        };
+        fetchRequests();
+    }, [workspaceId]);
 
     // Wizard State
     const [wizardStep, setWizardStep] = useState(1);
     const [isRecording, setIsRecording] = useState(false);
-    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+    const audioChunksRef = React.useRef<Blob[]>([]);
+    const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -62,34 +98,115 @@ export const DesignRequests: React.FC = () => {
         }));
     };
 
-    const toggleRecording = () => {
-        if (isRecording) {
-            setIsRecording(false);
-            setFormData(prev => ({ ...prev, hasVoiceNote: true }));
-        } else {
+    const handleUseTemplate = (template: typeof TEMPLATES[0]) => {
+        setFormData({
+            title: `Copy of ${template.title}`,
+            description: template.description,
+            designType: template.type,
+            platforms: template.platforms,
+            colors: template.colors,
+            dueDate: '',
+            assignedTo: '',
+            links: '',
+            hasVoiceNote: false
+        });
+        setAudioBlob(null);
+        setAudioUrl(null);
+        setActiveTab('requests');
+        setWizardStep(1);
+        setIsCreating(true);
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                setAudioBlob(blob);
+                setAudioUrl(url);
+                setFormData(prev => ({ ...prev, hasVoiceNote: true }));
+            };
+
+            mediaRecorder.start();
             setIsRecording(true);
-            // Simulate recording
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('Microphone access is required to record a voice note.');
         }
     };
 
-    const handleSubmit = () => {
-        const newRequest: DesignRequest = {
-            id: Date.now().toString(),
-            title: formData.title,
-            type: 'Social', // Simplified for the list view
-            status: 'Pending',
-            priority: 'Medium',
-            date: new Date().toISOString().split('T')[0],
-            assignedTo: formData.assignedTo
-        };
-        setRequests([newRequest, ...requests]);
-        setIsCreating(false);
-        setWizardStep(1);
-        setFormData({
-            title: '', description: '', designType: 'Promotion', platforms: [], 
-            colors: { primary: '#4f46e5', secondary: '#000000', accent: '#ffffff' }, 
-            dueDate: '', assignedTo: '', links: '', hasVoiceNote: false
-        });
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            setIsRecording(false);
+        }
+    };
+
+    const toggleRecording = () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
+
+    const handleSubmit = async () => {
+        const token = localStorage.getItem('sk_agency_token') || localStorage.getItem('socialknoks_token');
+        try {
+            const formDataToSend = new FormData();
+            formDataToSend.append('title', formData.title);
+            formDataToSend.append('description', formData.description);
+            formDataToSend.append('designType', formData.designType);
+            formDataToSend.append('platforms', JSON.stringify(formData.platforms));
+            formDataToSend.append('colors', JSON.stringify(formData.colors));
+            formDataToSend.append('dueDate', formData.dueDate);
+            formDataToSend.append('assignedTo', formData.assignedTo);
+            formDataToSend.append('links', formData.links);
+            formDataToSend.append('hasVoiceNote', formData.hasVoiceNote.toString());
+            
+            if (audioBlob) {
+                formDataToSend.append('voice_note', audioBlob, 'voice_note.webm');
+            }
+            
+            const response = await fetch(`http://localhost:8000/api/design-requests/${workspaceId}`, {
+                method: 'POST',
+                headers: { 
+                    Authorization: `Bearer ${token}` 
+                },
+                body: formDataToSend
+            });
+            
+            if (response.ok) {
+                const newRequest = await response.json();
+                setRequests([newRequest, ...requests]);
+                setIsCreating(false);
+                setWizardStep(1);
+                setFormData({
+                    title: '', description: '', designType: 'Promotion', platforms: [], 
+                    colors: { primary: '#4f46e5', secondary: '#000000', accent: '#ffffff' }, 
+                    dueDate: '', assignedTo: '', links: '', hasVoiceNote: false
+                });
+                setAudioBlob(null);
+                setAudioUrl(null);
+            } else {
+                alert('Failed to submit design request');
+            }
+        } catch (error) {
+            console.error("Failed to submit", error);
+            alert('Failed to submit design request');
+        }
     };
 
     const getInitials = (name?: string) => {
@@ -260,15 +377,16 @@ export const DesignRequests: React.FC = () => {
                                 </button>
                             ) : (
                                 <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                                    <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-sm">
-                                        <Play size={16} fill="currentColor" />
-                                    </button>
                                     <div className="flex-1">
-                                        <div className="h-1 bg-indigo-200 rounded-full w-full overflow-hidden">
-                                            <div className="h-full bg-indigo-600 w-1/3"></div>
-                                        </div>
+                                        {audioUrl && (
+                                            <audio src={audioUrl} controls className="w-full h-10" />
+                                        )}
                                     </div>
-                                    <button onClick={() => setFormData({...formData, hasVoiceNote: false})} className="p-2 text-slate-400 hover:text-red-500">
+                                    <button onClick={() => {
+                                        setFormData({...formData, hasVoiceNote: false});
+                                        setAudioBlob(null);
+                                        setAudioUrl(null);
+                                    }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-white rounded-lg transition-colors">
                                         <X size={16} />
                                     </button>
                                 </div>
@@ -379,13 +497,27 @@ export const DesignRequests: React.FC = () => {
 
             {activeTab === 'templates' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                         <div key={i} className="group relative rounded-2xl overflow-hidden bg-slate-900 aspect-[4/5] shadow-md hover:shadow-xl transition-all cursor-pointer">
-                             <img src={`https://picsum.photos/400/500?random=${i+10}`} alt="Template" className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" />
-                             <div className="absolute inset-0 flex flex-col justify-end p-6 translate-y-4 group-hover:translate-y-0 transition-transform">
-                                 <div className="bg-indigo-600 w-fit px-2 py-1 rounded text-[10px] font-bold text-white mb-2">Instagram</div>
-                                 <h3 className="text-white font-bold text-lg leading-tight">Modern Sale #{i}</h3>
-                                 <button className="mt-4 bg-white text-slate-900 py-2 rounded-lg font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity delay-75 hover:bg-indigo-50">Use Template</button>
+                    {TEMPLATES.map((template, i) => (
+                         <div key={template.id} className="group relative rounded-2xl overflow-hidden bg-slate-900 aspect-[4/5] shadow-md hover:shadow-xl transition-all cursor-pointer">
+                             <img src={`https://picsum.photos/400/500?random=${i+10}`} alt={template.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" />
+                             <div className="absolute inset-0 flex flex-col justify-end p-6 translate-y-4 group-hover:translate-y-0 transition-transform bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent">
+                                 <div className="flex gap-2 flex-wrap mb-2">
+                                     {template.platforms.slice(0, 2).map(p => (
+                                         <span key={p} className="bg-indigo-600 px-2 py-1 rounded text-[10px] font-bold text-white shadow-sm">{p}</span>
+                                     ))}
+                                     {template.platforms.length > 2 && <span className="bg-slate-700 px-2 py-1 rounded text-[10px] font-bold text-white shadow-sm">+{template.platforms.length - 2}</span>}
+                                 </div>
+                                 <h3 className="text-white font-bold text-lg leading-tight drop-shadow-md">{template.title}</h3>
+                                 <p className="text-slate-300 text-xs mt-2 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity delay-75">{template.description}</p>
+                                 <button 
+                                     onClick={(e) => {
+                                         e.stopPropagation();
+                                         handleUseTemplate(template);
+                                     }}
+                                     className="mt-4 bg-white text-slate-900 py-2.5 rounded-lg font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity delay-150 hover:bg-indigo-50 shadow-lg"
+                                 >
+                                     Use Template
+                                 </button>
                              </div>
                          </div>
                     ))}
