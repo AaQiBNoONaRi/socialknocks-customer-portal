@@ -30,13 +30,15 @@ import {
   ChevronUp,
   UserCircle
 } from 'lucide-react';
-import { UserRole, NavGroup, NavItem } from '../types';
+import { UserRole, NavGroup, NavItem, Workspace } from '../types';
 
 interface SidebarProps {
   currentRole: UserRole;
   currentPath: string;
   onNavigate: (path: string) => void;
   onLogout: () => void;
+  hasModuleAccess: (moduleName: string) => boolean;
+  currentWorkspace: Workspace;
 }
 
 const USER_NAV_GROUPS: NavGroup[] = [
@@ -144,7 +146,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   }
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentRole, currentPath, onNavigate, onLogout }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentRole, currentPath, onNavigate, onLogout, hasModuleAccess, currentWorkspace }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const activeNavGroups = currentRole === UserRole.SUPER_ADMIN ? ADMIN_NAV_GROUPS : USER_NAV_GROUPS;
@@ -175,11 +177,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentRole, currentPath, onNa
     <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col h-full sticky top-0 overflow-hidden z-20">
       <div className={`p-6 flex items-center gap-3 border-b border-slate-100 ${currentRole === UserRole.SUPER_ADMIN ? 'bg-slate-50' : ''}`}>
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg ${currentRole === UserRole.SUPER_ADMIN ? 'bg-slate-900 shadow-slate-300' : 'bg-indigo-600 shadow-indigo-200'}`}>
-          {currentRole === UserRole.SUPER_ADMIN ? 'H' : 'N'}
+          {currentRole === UserRole.SUPER_ADMIN ? 'H' : currentWorkspace.name[0]?.toUpperCase()}
         </div>
         <div>
           <span className="text-xl font-bold text-slate-800 tracking-tight block leading-none">
-            {currentRole === UserRole.SUPER_ADMIN ? 'HQ Admin' : 'Nexus'}
+            {currentRole === UserRole.SUPER_ADMIN ? 'HQ Admin' : currentWorkspace.name}
           </span>
           {currentRole === UserRole.SUPER_ADMIN && <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Super Admin</span>}
         </div>

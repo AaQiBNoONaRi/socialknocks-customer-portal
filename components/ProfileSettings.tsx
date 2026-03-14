@@ -6,7 +6,7 @@ import {
     X, ChevronDown, MapPin
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getToken = () =>
     localStorage.getItem('sk_agency_token') ||
@@ -168,7 +168,7 @@ const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 
     </div>
 );
 
-const Card = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+const Card: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
             <span className="text-indigo-500">{icon}</span>

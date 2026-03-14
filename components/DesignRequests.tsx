@@ -40,7 +40,7 @@ export const DesignRequests: React.FC<DesignRequestsProps> = ({ workspaceId }) =
             setIsLoading(true);
              try {
                  const token = localStorage.getItem('sk_agency_token') || localStorage.getItem('socialknoks_token');
-                 const response = await fetch(`http://localhost:8000/api/design-requests/${workspaceId}`, {
+                 const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/design-requests/${workspaceId}`, {
                       headers: { Authorization: `Bearer ${token}` }
                  });
                  if (response.ok) {
@@ -180,7 +180,7 @@ export const DesignRequests: React.FC<DesignRequestsProps> = ({ workspaceId }) =
                 formDataToSend.append('voice_note', audioBlob, 'voice_note.webm');
             }
             
-            const response = await fetch(`http://localhost:8000/api/design-requests/${workspaceId}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/design-requests/${workspaceId}`, {
                 method: 'POST',
                 headers: { 
                     Authorization: `Bearer ${token}` 

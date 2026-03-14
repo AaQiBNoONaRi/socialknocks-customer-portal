@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, MoreVertical, RefreshCw, Trash2, Share2, AlertCircle, CheckCircle, X, Loader2, Instagram, Facebook, Linkedin, Twitter, Youtube, Video } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole, Workspace } from '../types';
 
-const API_BASE = 'http://localhost:8000';
+interface SocialProfilesProps {
+    currentWorkspace: Workspace;
+}
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getToken = () =>
     localStorage.getItem('sk_agency_token') ||
@@ -19,7 +23,7 @@ interface SocialProfile {
 
 const MAX_PROFILES = 10;
 
-export const SocialProfiles: React.FC = () => {
+export const SocialProfiles: React.FC<SocialProfilesProps> = ({ currentWorkspace }) => {
     const [profiles, setProfiles] = useState<SocialProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
@@ -31,17 +35,10 @@ export const SocialProfiles: React.FC = () => {
 
     const fetchData = async () => {
         const token = getToken();
-        if (!token) { setIsLoading(false); return; }
+        if (!token || !currentWorkspace?.id) { setIsLoading(false); return; }
 
         try {
-            // 1. Get current workspace
-            const wsRes = await fetch(`${API_BASE}/api/workspaces/my`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const wsData = await wsRes.json();
-            const ws = wsData?.workspaces?.[0];
-            if (!ws?.id) { setIsLoading(false); return; }
-            const wsId = ws.id;
+            const wsId = currentWorkspace.id;
             setWorkspaceId(wsId);
 
             // 2. Fetch connections
@@ -65,7 +62,7 @@ export const SocialProfiles: React.FC = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [currentWorkspace.id]);
 
     // Listen for postMessage from SocialCallback popup
     useEffect(() => {

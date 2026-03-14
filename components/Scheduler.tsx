@@ -53,7 +53,7 @@ export const Scheduler: React.FC<SchedulerProps> = ({ onCompose, workspaceId }) 
     useEffect(() => {
         if (!workspaceId) return;
         setIsLoading(true);
-        fetch(`http://localhost:8000/api/posts/scheduled/${workspaceId}`)
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/scheduled/${workspaceId}`)
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 if (data?.posts) setScheduledPosts(data.posts);

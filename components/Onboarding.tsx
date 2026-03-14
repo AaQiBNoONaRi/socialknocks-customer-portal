@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Building2,
     Users,
@@ -25,7 +26,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const INDUSTRIES = [
     { value: 'marketing', label: 'Marketing & Advertising' },
@@ -126,12 +127,14 @@ function getStepFromHash(): Step {
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
-    const [step, setStep] = useState<Step>(getStepFromHash);
+    const [searchParams, setSearchParams] = useSearchParams();
+    
+    const step = (searchParams.get('step') as Step) || 'workspace';
 
-    // Sync step <-> URL hash
-    useEffect(() => {
-        window.location.hash = step;
-    }, [step]);
+    const setStep = (newStep: Step) => {
+        setSearchParams({ step: newStep });
+    };
+
 
     // Step 1: Workspace State
     const [workspaceName, setWorkspaceName] = useState('');

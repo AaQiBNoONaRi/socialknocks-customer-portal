@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 export const createPredisDesign = async (payload: any) => {
   const res = await fetch(`${API_BASE}/ai/predis/create`, {

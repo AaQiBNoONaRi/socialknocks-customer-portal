@@ -217,7 +217,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose, onEdit, workspaceId, re
         const fetchPosts = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`http://localhost:8000/api/posts/${workspaceId}`);
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/${workspaceId}`);
                 if (response.ok) {
                     const data = await response.json();
                     setPosts(data.posts);
@@ -237,7 +237,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose, onEdit, workspaceId, re
     const handleDelete = async (postId: string) => {
         if (!confirm('Are you sure you want to delete this post?')) return;
         try {
-            const res = await fetch(`http://localhost:8000/api/posts/${postId}`, { method: 'DELETE' });
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/${postId}`, { method: 'DELETE' });
             if (res.ok) setPosts(prev => prev.filter(p => p.id !== postId));
         } catch (err) {
             console.error('Delete failed:', err);
@@ -248,7 +248,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose, onEdit, workspaceId, re
 
     const handlePublishNow = async (postId: string) => {
         try {
-            const res = await fetch(`http://localhost:8000/api/posts/${postId}/publish`, { method: 'POST' });
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/${postId}/publish`, { method: 'POST' });
             if (res.ok) {
                 setPosts(prev =>
                     prev.map(p => p.id === postId ? { ...p, status: 'Published' as const } : p)
@@ -265,7 +265,7 @@ export const Posts: React.FC<PostsProps> = ({ onCompose, onEdit, workspaceId, re
 
     const handleWithdraw = async (postId: string) => {
         try {
-            const res = await fetch(`http://localhost:8000/api/posts/${postId}/withdraw`, { method: 'POST' });
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/${postId}/withdraw`, { method: 'POST' });
             if (res.ok) {
                 setPosts(prev =>
                     prev.map(p => p.id === postId ? { ...p, status: 'Draft' as const } : p)

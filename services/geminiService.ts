@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || 'dummy_key_to_prevent_crash';
+
 // In a real scenario, we handle missing keys gracefully, but for this demo context we assume it exists or fail hard if needed.
 
 const ai = new GoogleGenAI({ apiKey });
@@ -25,21 +26,23 @@ export const generatePostContent = async (topic: string, platform: string, tone:
 };
 
 export const generateContentIdeas = async (niche: string): Promise<string[]> => {
-    try {
-        const prompt = `Give me 5 creative content ideas for a brand in the "${niche}" niche. Return ONLY a JSON array of strings.`;
-        
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json"
-            }
-        });
-        
-        const text = response.text || "[]";
-        return JSON.parse(text);
-    } catch (error) {
-        console.error("Gemini Idea Gen Error", error);
-        return ["Behind the scenes look", "Customer testimonial", "Product tutorial", "Industry news reaction", "Team spotlight"];
-    }
+  try {
+    const prompt = `Give me 5 creative content ideas for a brand in the "${niche}" niche. Return ONLY a JSON array of strings.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const text = response.text || "[]";
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Gemini Idea Gen Error", error);
+    return ["Behind the scenes look", "Customer testimonial", "Product tutorial", "Industry news reaction", "Team spotlight"];
+  }
 }
+
+

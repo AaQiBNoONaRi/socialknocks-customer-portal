@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole } from '../types';
+import { UserRole, Workspace } from '../types';
 import { Mail, Shield, Trash2, Plus, X, Loader2, CheckCircle, Clock } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+interface TeamProps {
+    currentWorkspace: Workspace;
+}
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getToken = () =>
     localStorage.getItem('sk_agency_token') ||
@@ -25,7 +29,7 @@ interface Connection {
     username?: string;
 }
 
-export const Team: React.FC = () => {
+export const Team: React.FC<TeamProps> = ({ currentWorkspace }) => {
     const [members, setMembers] = useState<Member[]>([]);
     const [connections, setConnections] = useState<Connection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -40,29 +44,23 @@ export const Team: React.FC = () => {
     const [inviteSent, setInviteSent] = useState(false);
     const [inviteError, setInviteError] = useState('');
 
-    // Fetch workspace ID + members + connections on mount
+    // Fetch members + connections on workspace change
     useEffect(() => {
         const token = getToken();
-        if (!token) { setIsLoading(false); return; }
+        if (!token || !currentWorkspace?.id) { setIsLoading(false); return; }
 
         const fetchData = async () => {
+            setIsLoading(true);
             try {
-                // 1. Get current workspace
-                const wsRes = await fetch(`${API_BASE}/api/workspaces/my`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const wsData = await wsRes.json();
-                const ws = wsData?.workspaces?.[0];
-                if (!ws?.id) { setIsLoading(false); return; }
-                const wsId = ws.id;
+                const wsId = currentWorkspace.id;
                 setWorkspaceId(wsId);
 
-                // 2. Fetch members and connections in parallel
+                // Fetch members and connections in parallel
                 const [memRes, connRes] = await Promise.all([
                     fetch(`${API_BASE}/api/team/members?workspace_id=${wsId}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     }),
-                    fetch(`${API_BASE}/api/auth/social/connections/${wsId}`, {
+                    fetch(`${API_BASE}/auth/social/connections/${wsId}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                 ]);
@@ -83,7 +81,7 @@ export const Team: React.FC = () => {
         };
 
         fetchData();
-    }, []);
+    }, [currentWorkspace.id]);
 
     const handleInvite = async () => {
         if (!newEmail) return;

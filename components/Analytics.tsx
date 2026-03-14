@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     PieChart, Pie, Cell, BarChart, Bar, Legend 
@@ -6,8 +6,17 @@ import {
 import { 
     Download, Calendar, ArrowUpRight, ArrowDownRight, 
     Users, Eye, MousePointerClick, Share2, MessageCircle, Heart, 
-    TrendingUp, DollarSign, Layers, Target, Facebook, Instagram, Linkedin, Twitter 
+    TrendingUp, DollarSign, Layers, Target, Facebook, Instagram, Linkedin, Twitter, Youtube, Video 
 } from 'lucide-react';
+import { Workspace } from '../types';
+
+interface AnalyticsProps {
+    currentWorkspace: Workspace;
+}
+
+const getToken = () =>
+    localStorage.getItem('sk_agency_token') ||
+    localStorage.getItem('socialknoks_token') || '';
 
 // --- Mock Data ---
 
@@ -83,9 +92,84 @@ const KPICard = ({ title, value, change, isPositive, icon: Icon }: any) => (
     </div>
 );
 
-export const Analytics: React.FC = () => {
+export const Analytics: React.FC<AnalyticsProps> = ({ currentWorkspace }) => {
     const [activeTab, setActiveTab] = useState<'social' | 'posts' | 'campaign'>('social');
     const [dateRange, setDateRange] = useState('Last 30 Days');
+    const [stats, setStats] = useState<any[]>([]);
+    const [postStats, setPostStats] = useState<any[]>([]);
+    const [funnelData, setFunnelData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [campaignLoading, setCampaignLoading] = useState(false);
+    const [summary, setSummary] = useState({ total_followers: 0, total_reach: 0 });
+
+    const fetchAnalytics = async () => {
+        const token = getToken();
+        if (!token || !currentWorkspace?.id) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/analytics/social/${currentWorkspace.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            if (result.success) {
+                setStats(result.data);
+                setSummary(result.summary);
+            }
+        } catch (err) {
+            console.error("Failed to fetch analytics:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchPostsAnalytics = async () => {
+        const token = getToken();
+        if (!token || !currentWorkspace?.id) return;
+        setPostsLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/analytics/posts/${currentWorkspace.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            if (result.success) {
+                setPostStats(result.data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch post analytics:", err);
+        } finally {
+            setPostsLoading(false);
+        }
+    };
+
+    const fetchCampaignAnalytics = async () => {
+        const token = getToken();
+        if (!token || !currentWorkspace?.id) return;
+        setCampaignLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/analytics/campaign/${currentWorkspace.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            if (result.success) {
+                setFunnelData(result.funnel);
+            }
+        } catch (err) {
+            console.error("Failed to fetch campaign analytics:", err);
+        } finally {
+            setCampaignLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'social') fetchAnalytics();
+        if (activeTab === 'posts') fetchPostsAnalytics();
+        if (activeTab === 'campaign') fetchCampaignAnalytics();
+    }, [currentWorkspace.id, activeTab]);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -147,8 +231,8 @@ export const Analytics: React.FC = () => {
             {activeTab === 'social' && (
                 <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <KPICard title="Total Followers" value="124.5k" change="+12%" isPositive={true} icon={Users} />
-                        <KPICard title="Accounts Reached" value="1.2M" change="+5.4%" isPositive={true} icon={Eye} />
+                        <KPICard title="Total Followers" value={loading ? "..." : summary.total_followers.toLocaleString()} change="+12%" isPositive={true} icon={Users} />
+                        <KPICard title="Accounts Reached" value={loading ? "..." : summary.total_reach.toLocaleString()} change="+5.4%" isPositive={true} icon={Eye} />
                         <KPICard title="Avg. Engagement" value="4.8%" change="-0.2%" isPositive={false} icon={MousePointerClick} />
                         <KPICard title="Link Clicks" value="8,920" change="+18%" isPositive={true} icon={MousePointerClick} />
                     </div>
@@ -172,20 +256,28 @@ export const Analytics: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {PAGE_PERFORMANCE.map((page) => (
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium italic">Loading real-time stats...</td>
+                                        </tr>
+                                    ) : stats.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium italic">No profiles connected. Go to "Social Profiles" to connect your accounts.</td>
+                                        </tr>
+                                    ) : stats.map((page) => (
                                         <tr key={page.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-6 py-4 font-bold text-slate-900">{page.name}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`p-1.5 rounded-lg ${page.color}`}>
-                                                        <page.icon size={14} />
+                                                    <div className={`p-1.5 rounded-lg ${PLATFORM_COLORS[page.platform.charAt(0).toUpperCase() + page.platform.slice(1)]}`}>
+                                                        {page.platform === 'facebook' ? <Facebook size={14} /> : <Instagram size={14} />}
                                                     </div>
-                                                    <span className="text-sm text-slate-600">{page.platform}</span>
+                                                    <span className="text-sm text-slate-600 capitalize">{page.platform}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-slate-700 font-medium">{page.followers}</td>
-                                            <td className="px-6 py-4 text-slate-700 font-medium">{page.reach}</td>
-                                            <td className="px-6 py-4 text-slate-700 font-medium">{page.engagement}</td>
+                                            <td className="px-6 py-4 text-slate-700 font-medium">{page.followers.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-slate-700 font-medium">{page.reach.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-slate-700 font-medium">{page.engagement_rate}%</td>
                                             <td className="px-6 py-4 text-right">
                                                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${page.trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {page.trend}
@@ -277,35 +369,43 @@ export const Analytics: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {postPerformanceData.map((post) => (
+                                    {postsLoading ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-medium italic">Fetching your latest posts performance...</td>
+                                        </tr>
+                                    ) : postStats.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-medium italic">No recent posts found for the connected accounts.</td>
+                                        </tr>
+                                    ) : postStats.map((post) => (
                                         <tr key={post.id} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <img src={post.image} alt="Thumbnail" className="w-12 h-12 rounded-lg object-cover border border-slate-100 group-hover:border-indigo-200 transition-colors" />
                                                     <div>
                                                         <p className="font-bold text-slate-900 text-sm truncate max-w-[200px]">{post.title}</p>
-                                                        <p className="text-xs text-slate-500">{post.date} • {post.type}</p>
+                                                        <p className="text-xs text-slate-500">{new Date(post.date).toLocaleDateString()} • Published</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${PLATFORM_COLORS[post.platform] || 'bg-slate-100 text-slate-600'}`}>
+                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${PLATFORM_COLORS[post.platform.charAt(0).toUpperCase() + post.platform.slice(1)] || 'bg-slate-100 text-slate-600'}`}>
                                                     {post.platform}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-1 text-sm font-medium text-slate-700">
-                                                    <Heart size={14} className="text-rose-500" /> {post.likes}
+                                                    <Heart size={14} className="text-rose-500" /> {post.likes.toLocaleString()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-1 text-sm font-medium text-slate-700">
-                                                    <MessageCircle size={14} className="text-blue-500" /> {post.comments}
+                                                    <MessageCircle size={14} className="text-blue-500" /> {post.comments.toLocaleString()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-1 text-sm font-medium text-slate-700">
-                                                    <Share2 size={14} className="text-green-500" /> {post.shares}
+                                                    <Share2 size={14} className="text-green-500" /> {post.shares.toLocaleString()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
@@ -331,20 +431,29 @@ export const Analytics: React.FC = () => {
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
                             <h3 className="text-lg font-bold text-slate-900 mb-1">Conversion Funnel</h3>
                             <p className="text-sm text-slate-500 mb-8">Drop-off rates from impression to purchase</p>
-                            <div className="h-64">
+                            <div className="h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart 
-                                        data={campaignFunnelData} 
+                                    <BarChart
                                         layout="vertical"
-                                        margin={{ top: 0, right: 30, left: 20, bottom: 0 }}
+                                        data={funnelData.length > 0 ? funnelData : funnelData}
+                                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
                                     >
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                                         <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" width={100} tick={{fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} />
-                                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px'}} />
+                                        <YAxis
+                                            dataKey="name"
+                                            type="category"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                            cursor={{ fill: '#f8fafc' }}
+                                        />
                                         <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
-                                            {campaignFunnelData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                                            {funnelData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'][index % 4]} />
                                             ))}
                                         </Bar>
                                     </BarChart>

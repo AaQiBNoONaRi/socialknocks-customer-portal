@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Shield, Check, X, Plus, Loader2, Save } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole, Workspace } from '../types';
+
+interface RolesPermissionsProps {
+    currentWorkspace: Workspace;
+}
 
 interface RoleConfig {
     role: string;
@@ -8,7 +12,7 @@ interface RoleConfig {
     isCustom?: boolean;
 }
 
-export const RolesPermissions: React.FC = () => {
+export const RolesPermissions: React.FC<RolesPermissionsProps> = ({ currentWorkspace }) => {
     const modules = ['Dashboard', 'AI Studio', 'Content Lab', 'Analytics', 'Store', 'Settings'];
     
     // Initial Config
@@ -62,8 +66,8 @@ export const RolesPermissions: React.FC = () => {
         <div className="space-y-6 animate-in fade-in duration-500 relative">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                     <div className="flex items-center gap-2 mb-2">
-                         <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded uppercase tracking-wider">Workspace</span>
+                    <div className="flex items-center gap-2 mb-2">
+                         <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded uppercase tracking-wider">{currentWorkspace.name}</span>
                     </div>
                     <h1 className="text-2xl font-bold text-slate-900">Roles & Permissions</h1>
                     <p className="text-slate-500">Configure access levels for different team members.</p>

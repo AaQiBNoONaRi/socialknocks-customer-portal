@@ -41,7 +41,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, onClose, wor
     // Fetch connected social pages
     useEffect(() => {
         if (!workspaceId || !isOpen) return;
-        fetch(`http://localhost:8000/auth/social/connections/${workspaceId}`)
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/social/connections/${workspaceId}`)
             .then(res => res.ok ? res.json() : null)
             .then(data => {
                 if (data?.connections) setConnections(data.connections);
@@ -92,8 +92,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, onClose, wor
 
         try {
             const url = initialPost
-                ? `http://localhost:8000/api/posts/${initialPost.id}`
-                : 'http://localhost:8000/api/posts/';
+                ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/${initialPost.id}`
+                : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/posts/`;
 
             const method = initialPost ? 'PUT' : 'POST';
 

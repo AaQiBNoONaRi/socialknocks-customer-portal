@@ -5,7 +5,7 @@ import {
     RefreshCw, AlertCircle, ChevronLeft, MessageSquare
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface Ticket {
     id: string;       // full Mongo ID (used for API calls)
